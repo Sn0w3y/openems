@@ -31,7 +31,8 @@ public class SunSpecCodeGenerator extends AbstractSunSpecCodeGenerator {
 
 	@Override
 	protected String getSunSpecJsonPath() {
-		return System.getProperty("user.home") + "\\git\\sunspec\\json\\";
+		// Hardcoded path for testing
+		return "C:/Users/johannes.haller/git/sunspec/json/";
 	}
 
 	@Override
@@ -72,7 +73,7 @@ public class SunSpecCodeGenerator extends AbstractSunSpecCodeGenerator {
 				"model_160.json", //
 				"model_211.json", //
 				"model_212.json", //
-				"model_213.json", //
+				// "model_213.json", // Model 213 - für Fronius benötigt - NICHT IGNORIEREN!
 				"model_214.json", //
 				"model_220.json", //
 				"model_302.json", //

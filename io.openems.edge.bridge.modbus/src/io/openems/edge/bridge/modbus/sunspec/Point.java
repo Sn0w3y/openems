@@ -126,8 +126,8 @@ public abstract sealed class Point {
 
 		public static enum Type implements Point.Type {
 			INT16(1), UINT16(1), COUNT(1), ACC16(1), INT32(2), UINT32(2), FLOAT32(2), ACC32(2), INT64(4), UINT64(4),
-			FLOAT64(4), ACC64(4), STRING2(2), STRING4(4), STRING5(5), STRING6(6), STRING7(7), STRING8(8), STRING12(12),
-			STRING16(16), STRING20(20), STRING25(25), STRING32(32),
+			FLOAT64(4), ACC64(4), STRING2(2), STRING4(4), STRING5(5), STRING6(6), STRING7(7), STRING8(8), STRING10(10),
+			STRING12(12), STRING16(16), STRING20(20), STRING25(25), STRING32(32), STRING150(150),
 			/* use PAD for reserved points */
 			PAD(1), IPADDR(1), IPV6ADDR(16), EUI48(6);
 
@@ -152,7 +152,7 @@ public abstract sealed class Point {
 				case PAD // This point is never needed/reserved
 					-> false;
 				case STRING12, STRING16, STRING2, STRING20, STRING25, STRING32, STRING4, STRING5, STRING6, STRING7,
-						STRING8 ->
+						STRING8, STRING10, STRING150 ->
 					!"".equals(value);
 				case EUI48 -> false; // TODO not implemented
 				};
@@ -180,8 +180,8 @@ public abstract sealed class Point {
 								-> OpenemsType.FLOAT;
 							case FLOAT64 //
 								-> OpenemsType.DOUBLE;
-							case STRING2, STRING4, STRING5, STRING6, STRING7, STRING8, STRING12, STRING16, STRING20,
-									STRING25, STRING32 //
+							case STRING2, STRING4, STRING5, STRING6, STRING7, STRING8, STRING10, STRING12, STRING16, 
+									STRING20, STRING25, STRING32, STRING150 //
 								-> OpenemsType.STRING;
 							}));
 		}
@@ -215,11 +215,13 @@ public abstract sealed class Point {
 			case STRING6 -> new StringWordElement(startAddress, 6);
 			case STRING7 -> new StringWordElement(startAddress, 7);
 			case STRING8 -> new StringWordElement(startAddress, 8);
+			case STRING10 -> new StringWordElement(startAddress, 10);
 			case STRING12 -> new StringWordElement(startAddress, 12);
 			case STRING16 -> new StringWordElement(startAddress, 16);
 			case STRING20 -> new StringWordElement(startAddress, 20);
 			case STRING25 -> new StringWordElement(startAddress, 25);
 			case STRING32 -> new StringWordElement(startAddress, 32);
+			case STRING150 -> new StringWordElement(startAddress, 150);
 			};
 		}
 	}

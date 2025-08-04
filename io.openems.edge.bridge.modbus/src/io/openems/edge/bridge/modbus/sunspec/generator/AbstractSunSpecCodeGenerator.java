@@ -65,7 +65,40 @@ public abstract class AbstractSunSpecCodeGenerator {
 					.blank() //
 					.writeln("package io.openems.edge.bridge.modbus.sunspec;") //
 					.blank() //
-					.writeln("import io.openems.common.channel.AccessMode;") //
+					.writeln("import static io.openems.common.channel.AccessMode.READ_ONLY;") //
+					.writeln("import static io.openems.common.channel.AccessMode.READ_WRITE;") //
+					.writeln("import static io.openems.edge.bridge.modbus.sunspec.Point.BitFieldPoint.Type.BITFIELD16;") //
+					.writeln("import static io.openems.edge.bridge.modbus.sunspec.Point.BitFieldPoint.Type.BITFIELD32;") //
+					.writeln("import static io.openems.edge.bridge.modbus.sunspec.Point.EnumPoint.Type.ENUM16;") //
+					.writeln("import static io.openems.edge.bridge.modbus.sunspec.Point.EnumPoint.Type.ENUM32;") //
+					.writeln("import static io.openems.edge.bridge.modbus.sunspec.Point.ValuePoint.Type.ACC32;") //
+					.writeln("import static io.openems.edge.bridge.modbus.sunspec.Point.ValuePoint.Type.ACC64;") //
+					.writeln("import static io.openems.edge.bridge.modbus.sunspec.Point.ValuePoint.Type.FLOAT32;") //
+					.writeln("import static io.openems.edge.bridge.modbus.sunspec.Point.ValuePoint.Type.INT16;") //
+					.writeln("import static io.openems.edge.bridge.modbus.sunspec.Point.ValuePoint.Type.INT32;") //
+					.writeln("import static io.openems.edge.bridge.modbus.sunspec.Point.ValuePoint.Type.INT64;") //
+					.writeln("import static io.openems.edge.bridge.modbus.sunspec.Point.ValuePoint.Type.ACC16;") //
+					.writeln("import static io.openems.edge.bridge.modbus.sunspec.Point.ValuePoint.Type.COUNT;") //
+					.writeln("import static io.openems.edge.bridge.modbus.sunspec.Point.ValuePoint.Type.PAD;") //
+					.writeln("import static io.openems.edge.bridge.modbus.sunspec.Point.ValuePoint.Type.IPADDR;") //
+					.writeln("import static io.openems.edge.bridge.modbus.sunspec.Point.ScaleFactorPoint.Type.SUNSSF;") //
+					.writeln("import static io.openems.edge.bridge.modbus.sunspec.Point.ValuePoint.Type.STRING12;") //
+					.writeln("import static io.openems.edge.bridge.modbus.sunspec.Point.ValuePoint.Type.STRING16;") //
+					.writeln("import static io.openems.edge.bridge.modbus.sunspec.Point.ValuePoint.Type.STRING2;") //
+					.writeln("import static io.openems.edge.bridge.modbus.sunspec.Point.ValuePoint.Type.STRING20;") //
+					.writeln("import static io.openems.edge.bridge.modbus.sunspec.Point.ValuePoint.Type.STRING25;") //
+					.writeln("import static io.openems.edge.bridge.modbus.sunspec.Point.ValuePoint.Type.STRING32;") //
+					.writeln("import static io.openems.edge.bridge.modbus.sunspec.Point.ValuePoint.Type.STRING4;") //
+					.writeln("import static io.openems.edge.bridge.modbus.sunspec.Point.ValuePoint.Type.STRING5;") //
+					.writeln("import static io.openems.edge.bridge.modbus.sunspec.Point.ValuePoint.Type.STRING6;") //
+					.writeln("import static io.openems.edge.bridge.modbus.sunspec.Point.ValuePoint.Type.STRING7;") //
+					.writeln("import static io.openems.edge.bridge.modbus.sunspec.Point.ValuePoint.Type.STRING8;") //
+					.writeln("import static io.openems.edge.bridge.modbus.sunspec.Point.ValuePoint.Type.STRING10;") //
+					.writeln("import static io.openems.edge.bridge.modbus.sunspec.Point.ValuePoint.Type.STRING150;") //
+					.writeln("import static io.openems.edge.bridge.modbus.sunspec.Point.ValuePoint.Type.UINT16;") //
+					.writeln("import static io.openems.edge.bridge.modbus.sunspec.Point.ValuePoint.Type.UINT32;") //
+					.writeln("import static io.openems.edge.bridge.modbus.sunspec.Point.ValuePoint.Type.UINT64;") //
+					.blank() //
 					.writeln("import io.openems.common.channel.Level;") //
 					.writeln("import io.openems.common.channel.Unit;") //
 					.writeln("import io.openems.common.types.OptionsEnum;") //
@@ -107,7 +140,15 @@ public abstract class AbstractSunSpecCodeGenerator {
 				w.writeln("	public static enum S" + model.id() + " implements SunSpecPoint {");
 				for (var i = 0; i < model.points().size(); i++) {
 					final var point = model.points().get(i);
-					final var pointUpperId = toUpperUnderscore(point.id());
+					// Check if ID contains repeating block index (e.g., P_1_F, P_2_F)
+					final String pointUpperId;
+					if (point.id().matches(".*_\\d+_.*")) {
+						// ID already contains index from repeating block, use as is but uppercase
+						pointUpperId = point.id().toUpperCase();
+					} else {
+						// Normal ID, convert to upper underscore
+						pointUpperId = toUpperUnderscore(point.id());
+					}
 					final var pointType = PointType.evaluate(point);
 					w //
 							.write("		" + pointUpperId + "(new " + pointType.clazz + "(" //
@@ -121,9 +162,17 @@ public abstract class AbstractSunSpecCodeGenerator {
 					if (pointType != PointType.SCALE_FACTOR) {
 						w //
 								.writeln(", //") //
-								.write("				" + pointType.typeClazz + "." + point.type() + ", " //
+								.write("				");
+						// Add proper type prefix based on point type
+						if (pointType == PointType.VALUE || pointType == PointType.SCALED_VALUE) {
+							// Special handling for PAD type to avoid forward reference
+							if (point.type().equals("PAD")) {
+								w.write("ValuePoint.Type.");
+							}
+						}
+						w.write(point.type() + ", " //
 										+ point.mandatory() + " /* mandatory? */" //
-										+ ", AccessMode." + point.accessMode().name());
+										+ ", " + (point.accessMode().name().equals("READ_ONLY") ? "READ_ONLY" : "READ_WRITE"));
 						if (pointType == PointType.VALUE || pointType == PointType.SCALED_VALUE) {
 							w //
 									.write(", Unit." + point.unit().name());
@@ -136,13 +185,13 @@ public abstract class AbstractSunSpecCodeGenerator {
 									.write(", ") //
 									.writeIf(point.symbols().length == 0, //
 											"new OptionsEnum[0]", //
-											"S" + model.id() + "_" + point.id() + ".values()");
+											"S" + model.id() + "_" + pointUpperId + ".values()");
 						} else if (pointType == PointType.BITFIELD) {
 							w //
 									.write(", ") //
 									.writeIf(point.symbols().length == 0, //
 											"new SunSpecBitPoint[0]", //
-											"S" + model.id() + "_" + point.id() + ".values()");
+											"S" + model.id() + "_" + pointUpperId + ".values()");
 						}
 					}
 
@@ -170,13 +219,22 @@ public abstract class AbstractSunSpecCodeGenerator {
 					if (point.symbols().length == 0) {
 						continue;
 					}
+					// Check if ID contains repeating block index (e.g., P_1_F, P_2_F)
+					final String pointUpperId;
+					if (point.id().matches(".*_\\d+_.*")) {
+						// ID already contains index from repeating block, use as is but uppercase
+						pointUpperId = point.id().toUpperCase();
+					} else {
+						// Normal ID, convert to upper underscore
+						pointUpperId = toUpperUnderscore(point.id());
+					}
 					final var pointType = PointType.evaluate(point);
 					/*
 					 * Handle Enum points
 					 */
 					if (pointType == PointType.ENUM) {
 						w //
-								.writeln("	public static enum S" + model.id() + "_" + point.id()
+								.writeln("	public static enum S" + model.id() + "_" + pointUpperId
 										+ " implements OptionsEnum {") //
 								.writeln("		UNDEFINED(-1, \"Undefined\"), //");
 						for (var i = 0; i < point.symbols().length; i++) {
@@ -199,7 +257,7 @@ public abstract class AbstractSunSpecCodeGenerator {
 								.writeln("		private final int value;") //
 								.writeln("		private final String name;") //
 								.blank() //
-								.writeln("		private S" + model.id() + "_" + point.id()
+								.writeln("		private S" + model.id() + "_" + pointUpperId
 										+ "(int value, String name) {") //
 								.writeln("			this.value = value;") //
 								.writeln("			this.name = name;") //
@@ -226,7 +284,7 @@ public abstract class AbstractSunSpecCodeGenerator {
 						/*
 						 * Handle BitField points
 						 */
-						final var name = "S" + model.id() + "_" + point.id();
+						final var name = "S" + model.id() + "_" + pointUpperId;
 						w.writeln("	public static enum " + name + " implements SunSpecBitPoint {");
 						for (var i = 0; i < point.symbols().length; i++) {
 							final var symbol = point.symbols()[i];
@@ -332,18 +390,16 @@ public abstract class AbstractSunSpecCodeGenerator {
 
 	protected static enum PointType {
 
-		VALUE("ValuePoint", "ValuePoint.Type"), //
-		SCALED_VALUE("ScaledValuePoint", "ValuePoint.Type"), //
-		SCALE_FACTOR("ScaleFactorPoint", "ScaleFactorPoint.Type"), //
-		ENUM("EnumPoint", "EnumPoint.Type"), //
-		BITFIELD("BitFieldPoint", "BitFieldPoint.Type");
+		VALUE("ValuePoint"), //
+		SCALED_VALUE("ScaledValuePoint"), //
+		SCALE_FACTOR("ScaleFactorPoint"), //
+		ENUM("EnumPoint"), //
+		BITFIELD("BitFieldPoint");
 
 		public final String clazz;
-		public final String typeClazz;
 
-		private PointType(String clazz, String type) {
+		private PointType(String clazz) {
 			this.clazz = clazz;
-			this.typeClazz = type;
 		}
 
 		public static PointType evaluate(Point point) {

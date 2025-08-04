@@ -64,9 +64,24 @@ public record Model(int id, int len, String name, String label, String descripti
 			}
 		}
 
-		// this is value is taken from the excel sheet
-		// This should be basically read from the modbus
-		var modelLength = 16;
+		// Try to get model length from the L field, otherwise calculate it
+		var modelLength = 0;
+		for (var point : getAsJsonArray(group, "points")) {
+			var p = getAsJsonObject(point);
+			if (p.get("name").getAsString().equals("L")) {
+				// Found the L (length) field - use its default value if available
+				if (p.has("value")) {
+					modelLength = p.get("value").getAsInt();
+					break;
+				}
+			}
+		}
+		
+		// If no L field found or no value, calculate based on content
+		if (modelLength == 0) {
+			modelLength = sizeOfFixedRegisters + sizeOfRepeatedRegisters;
+		}
+		
 		var numberOfRepeatingElements = 0;
 
 		if (sizeOfRepeatedRegisters > 0) {
@@ -76,15 +91,21 @@ public record Model(int id, int len, String name, String label, String descripti
 		}
 
 		// add the repeateable registers to list with appending the number repetition
+		if (groups.size() > 0) {
+			System.out.println("Model " + id + " has " + groups.size() + " groups, " + numberOfRepeatingElements + " repeating elements");
+		}
 		for (int i = 1; i <= numberOfRepeatingElements; i++) {
-
+			int groupIndex = 0;
 			for (var point : groups) {
-
+				groupIndex++;
 				var pointObj = point.getAsJsonObject();
 				var fp = pointObj.get("points").getAsJsonArray();
 
 				for (var subPoint : fp) {
-					var p = Point.fromJson(getAsJsonObject(subPoint), offset, i);
+					// For models with multiple groups containing same field names,
+					// use group index as suffix instead of repetition index
+					int suffixToUse = groups.size() > 1 ? groupIndex : i;
+					var p = Point.fromJson(getAsJsonObject(subPoint), offset, suffixToUse);
 					// ID and length not to be considered as points
 					if (!p.id().equals("ID") && !p.id().equals("L")) {
 						list.add(p);

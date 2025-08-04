@@ -65,8 +65,68 @@ public record Point(String id, int len, int offset, String type, Optional<String
 		var id = getAsString(point, "name");
 		// Modify name if suffPrefix is provided
 		if (suffPrefix != null) {
-			var modifiedName = id.replaceAll("([a-z])([A-Z])", "$1_$2"); // Insert underscore before uppercase letters
-			id = modifiedName.replaceFirst("_", "_" + suffPrefix + "_"); // Add prefix
+			String originalId = id;
+			
+			// Special handling for specific short IDs that should be kept together
+			if (id.matches("^(ID|DC|AC|PF).*")) {
+				// These prefixes should stay together, insert suffix after first uppercase sequence
+				if (id.length() == 2) {
+					// Simple 2-letter IDs like "ID", "DC", "AC", "PF"
+					id = id.charAt(0) + "_" + suffPrefix + "_" + id.charAt(1);
+				} else if (id.startsWith("DC") || id.startsWith("AC")) {
+					// Handle DCxxx, ACxxx patterns
+					id = id.substring(0, 2) + "_" + suffPrefix + "_" + id.substring(2);
+				} else if (id.equals("IDStr")) {
+					// Special case for IDStr
+					id = "ID_" + suffPrefix + "_Str";
+				} else {
+					// Other patterns starting with these prefixes
+					var modifiedName = id.replaceAll("([a-z])([A-Z])", "$1_$2");
+					id = modifiedName.replaceFirst("_", "_" + suffPrefix + "_");
+				}
+			} else if (id.length() <= 3) {
+				// Short IDs (1-3 characters)
+				if (id.length() == 1) {
+					// Single character IDs like "P", "I", "V"
+					id = id + "_" + suffPrefix;
+				} else if (id.length() == 2) {
+					id = id.charAt(0) + "_" + suffPrefix + "_" + id.charAt(1);
+				} else if (id.length() == 3) {
+					// For 3-letter IDs, check if it's all uppercase or mixed case
+					if (id.equals(id.toUpperCase())) {
+						// All uppercase like "EXT" -> "E_1_XT"
+						id = id.charAt(0) + "_" + suffPrefix + "_" + id.substring(1);
+					} else if (Character.isUpperCase(id.charAt(0)) && Character.isLowerCase(id.charAt(1))) {
+						// Mixed case like "Pri", "Tmp" -> "P_1_ri", "T_1_mp"
+						id = id.charAt(0) + "_" + suffPrefix + "_" + id.substring(1);
+					} else {
+						// Other patterns
+						id = id.charAt(0) + "_" + suffPrefix + "_" + id.substring(1);
+					}
+				}
+			} else {
+				// Regular IDs: insert underscore before uppercase letters, then add suffix
+				var modifiedName = id.replaceAll("([a-z])([A-Z])", "$1_$2");
+				if (modifiedName.contains("_")) {
+					// If we found a place to split, insert suffix after first part
+					id = modifiedName.replaceFirst("_", "_" + suffPrefix + "_");
+				} else {
+					// No lowercase-uppercase boundary found, try other patterns
+					// Check for all uppercase after position 0
+					int splitPos = 1;
+					while (splitPos < id.length() && Character.isUpperCase(id.charAt(splitPos))) {
+						splitPos++;
+					}
+					if (splitPos > 1 && splitPos < id.length()) {
+						// Found a split position
+						id = id.substring(0, splitPos) + "_" + suffPrefix + "_" + id.substring(splitPos);
+					} else {
+						// Fallback: just append suffix
+						id = id + "_" + suffPrefix;
+					}
+				}
+			}
+			System.out.println("Repeating block point: " + id + " (original: " + originalId + ", suffix: " + suffPrefix + ")");
 		}
 
 		var len = getAsInt(point, "size");
@@ -76,6 +136,8 @@ public record Point(String id, int len, int offset, String type, Optional<String
 		var t = getAsString(point, "type");
 		if (t.equals("string")) {
 			type = "STRING" + len;
+		} else if (t.equals("pad")) {
+			type = "PAD";
 		} else {
 			type = t.toUpperCase();
 		}
@@ -115,7 +177,7 @@ public record Point(String id, int len, int offset, String type, Optional<String
 			return switch (s) {
 			case "", "%ARtg/%dV", "bps", "cos()", "deg", "Degrees", "hhmmss", "hhmmss.sssZ", "HPa", "kO", "Mbps",
 					"meters", "mm", "mps", "m/s", "ohms", "Pct", "PF", "SF", "text", "Tmd", "Tmh", "Tms", "Various",
-					"Vm", "W/m2", "YYYYMMDD", "S", "%Max/Sec" ->
+					"Vm", "W/m2", "W/m^2", "V/s", "W/s", "A/s", "Hz/s", "VNomPct", "YYYYMMDD", "S", "%Max/Sec" ->
 				Unit.NONE;
 			case "%", "%WHRtg" //
 				-> Unit.PERCENT;

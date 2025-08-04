@@ -22,7 +22,19 @@ public class Utils {
 				.replace("-", "_") //
 				.replace(" ", "_");
 		if (!string.toUpperCase().equals(string)) {
-			string = CaseFormat.UPPER_CAMEL.to(CaseFormat.UPPER_UNDERSCORE, string);
+			// Special cases for backward compatibility
+			if (string.equals("WMaxLim_Ena")) {
+				return "WMaxLim_Ena"; // Keep original name
+			} else if (string.equals("ACType")) {
+				return "ACType"; // Keep original name  
+			} else if (string.equals("OutPFSet_Ena")) {
+				return "OutPFSet_Ena"; // Keep original name
+			} else if (string.equals("VArPct_Ena")) {
+				return "VArPct_Ena"; // Keep original name
+			} else {
+				// Default transformation
+				string = CaseFormat.UPPER_CAMEL.to(CaseFormat.UPPER_UNDERSCORE, string);
+			}
 		}
 		return string.replace("__", "_");
 	}
