@@ -46,7 +46,7 @@ public class SetPvLimitHandler implements ThrowingConsumer<Optional<Integer>, Op
 			wRtgChannel = this.parent.getSunSpecChannelOrError(DefaultSunSpecModel.S120.W_RTG);
 
 			// Get Power Limitation Enabled WriteChannel
-			wMaxLimEnaChannel = this.parent.getSunSpecChannelOrError(DefaultSunSpecModel.S123.W_MAX_LIM_ENA);
+			wMaxLimEnaChannel = this.parent.getSunSpecChannelOrError(DefaultSunSpecModel.S123.WMaxLim_Ena);
 
 		} catch (OpenemsNamedException e) {
 			// Unable to get required Channels,...

@@ -123,12 +123,12 @@ public class AbstractOpenemsSunSpecComponentTest {
 				.next(new TestCase() //
 						.output(c(S101.A), 1230F) //
 						.output(c(S101.APH_A), 2340F) //
-						.output(c(S701.A_C_TYPE), S701_ACType.UNDEFINED)) //
+						.output(c(S701.ACType), S701_ACType.UNDEFINED)) //
 
 				.next(new TestCase() //
 						.output(c(S103.A), 1240F) //
 						.output(c(S103.APH_A), 2350F) //
-						.output(c(S701.A_C_TYPE), S701_ACType.SPLIT_PHASE)) //
+						.output(c(S701.ACType), S701_ACType.SPLIT_PHASE)) //
 
 				.deactivate();
 	}
