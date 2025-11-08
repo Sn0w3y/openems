@@ -1,20 +1,22 @@
 // @ts-strict-ignore
-import { Component, OnInit } from "@angular/core";
+import { Component, OnDestroy, OnInit } from "@angular/core";
 import { AbstractControl } from "@angular/forms";
 import { FieldWrapper } from "@ngx-formly/core";
+import { Subject, takeUntil } from "rxjs";
 
 @Component({
     selector: "formly-wrapper-default-of-cases",
     template: "<ng-container #fieldComponent ></ng-container>",
     standalone: false,
 })
-export class FormlyWrapperDefaultValueWithCasesComponent extends FieldWrapper implements OnInit {
+export class FormlyWrapperDefaultValueWithCasesComponent extends FieldWrapper implements OnInit, OnDestroy {
 
     private casesToSubscribe: FieldDefaultCases[] = [];
+    private destroy$ = new Subject<void>();
 
     public ngOnInit() {
         this.getOptions().forEach((item: FieldDefaultCases) => {
-            this.form.valueChanges.subscribe((value) => {
+            this.form.valueChanges.pipe(takeUntil(this.destroy$)).subscribe((value) => {
                 const indicesToRemove = [];
                 const casesToSub = this.casesToSubscribe;
                 this.casesToSubscribe = [];
@@ -54,8 +56,13 @@ export class FormlyWrapperDefaultValueWithCasesComponent extends FieldWrapper im
         });
     }
 
+    public ngOnDestroy() {
+        this.destroy$.next();
+        this.destroy$.complete();
+    }
+
     private subscribe(item: FieldDefaultCases, control: AbstractControl) {
-        control.valueChanges.subscribe((value) => {
+        control.valueChanges.pipe(takeUntil(this.destroy$)).subscribe((value) => {
             if (this.onChange(item, value)) {
                 return;
             }
@@ -67,7 +74,7 @@ export class FormlyWrapperDefaultValueWithCasesComponent extends FieldWrapper im
                     continue;
                 }
                 for (const optionCase of option.cases) {
-                    if (optionCase.case == valueOfField) {
+                    if (optionCase.case === valueOfField) {
                         this.formControl.setValue(optionCase.defaultValue);
                         return;
                     }
@@ -82,7 +89,7 @@ export class FormlyWrapperDefaultValueWithCasesComponent extends FieldWrapper im
     }
 
     private onChange(item: FieldDefaultCases, value: any): boolean {
-        const foundCase = item.cases.find(element => element.case == value);
+        const foundCase = item.cases.find(element => element.case === value);
         if (!foundCase) {
             return false;
         }
