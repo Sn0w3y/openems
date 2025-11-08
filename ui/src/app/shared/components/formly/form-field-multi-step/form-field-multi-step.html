@@ -7,7 +7,7 @@
         </ion-item>
       </ion-col>
     </ion-row>
-    @if (!isAllTrue()) {
+    @if (!allStepsComplete) {
       @if (props.description) {
         <ion-row>
           <ion-col>

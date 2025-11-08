@@ -69,6 +69,7 @@ export abstract class AbstractHistoryChart implements OnInit, OnDestroy {
   protected config: EdgeConfig = null;
   protected errorResponse: JsonrpcResponseError | null = null;
   protected legendOptions: { label: string, strokeThroughHidingStyle: boolean, hideLabelInLegend: boolean }[] = [];
+  protected chartHeight: number = 0;
 
   private channelData: { data: { [name: string]: number[] } } = { data: {} };
 
@@ -82,6 +83,7 @@ export abstract class AbstractHistoryChart implements OnInit, OnDestroy {
     this.service.historyPeriod.subscribe(() => {
       this.updateChart();
     });
+    this.calculateChartHeight();
   }
 
   /**
@@ -1032,10 +1034,15 @@ export abstract class AbstractHistoryChart implements OnInit, OnDestroy {
   }
 
   protected getChartHeight(): number {
+    return this.chartHeight;
+  }
+
+  private calculateChartHeight(): void {
     if (this.isOnlyChart) {
-      return window.innerHeight / 1.3;
+      this.chartHeight = window.innerHeight / 1.3;
+    } else {
+      this.chartHeight = window.innerHeight / 21 * 9;
     }
-    return window.innerHeight / 21 * 9;
   }
 
   protected updateChart() {

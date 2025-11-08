@@ -1,5 +1,5 @@
 // @ts-strict-ignore
-import { Component, Input, OnDestroy, OnInit } from "@angular/core";
+import { ChangeDetectionStrategy, Component, Input, OnDestroy, OnInit } from "@angular/core";
 import { PopoverController } from "@ionic/angular";
 import { TranslateService } from "@ngx-translate/core";
 import { addDays, addMonths, addWeeks, addYears, differenceInDays, differenceInMilliseconds, endOfDay, endOfMonth, endOfWeek, endOfYear, isAfter, isBefore, isFuture, startOfDay, startOfMonth, startOfWeek, startOfYear, subDays, subMonths, subWeeks, subYears } from "date-fns";
@@ -12,6 +12,7 @@ import { PickDatePopoverComponent } from "./popover/popover.component";
 @Component({
     selector: "pickdate",
     templateUrl: "./pickdate.component.html",
+    changeDetection: ChangeDetectionStrategy.OnPush,
     standalone: false,
     styles: [`
         ion-button.pickdate-styles {

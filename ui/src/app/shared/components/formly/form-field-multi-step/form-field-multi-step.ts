@@ -8,6 +8,8 @@ import { FieldType } from "@ngx-formly/core";
 })
 export class FormlyFieldMultiStepComponent extends FieldType implements OnInit {
 
+    protected allStepsComplete: boolean = false;
+
     protected get steps() {
         return this.props.steps || [];
     }
@@ -19,12 +21,14 @@ export class FormlyFieldMultiStepComponent extends FieldType implements OnInit {
         if (!Array.isArray(stepArray)) {
             this.formControl.setValue(Array(this.steps.length).fill(false));
         }
+        this.updateAllStepsComplete();
     }
 
     protected onCheckboxChange(event: any, index: number) {
         const updatedValue = this.formControl.value;
         updatedValue[index] = event.detail.checked;
         this.formControl.setValue(updatedValue);
+        this.updateAllStepsComplete();
     }
 
 
@@ -38,12 +42,11 @@ export class FormlyFieldMultiStepComponent extends FieldType implements OnInit {
     }
 
     /**
-     * Returns true/false value based on the step array values.
-     *
-     * @returns boolean value representing all values are true or not.
+     * Updates the allStepsComplete property based on current step values.
+     * Cached to avoid recalculation on every change detection cycle.
      */
-    protected isAllTrue() {
-        return this.formControl.value.lastIndexOf(false) === -1 ? true : false;
+    private updateAllStepsComplete(): void {
+        this.allStepsComplete = this.formControl.value.lastIndexOf(false) === -1;
     }
 
 }

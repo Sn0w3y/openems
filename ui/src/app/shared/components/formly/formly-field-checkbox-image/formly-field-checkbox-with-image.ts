@@ -41,6 +41,7 @@ import { Subject, takeUntil } from "rxjs";
 export class FormlyFieldCheckboxWithImageComponent extends FieldWrapper implements OnInit, OnDestroy {
 
     protected value: any;
+    protected shouldShowContent: boolean = false;
 
     // Properties for the nested serial number field
     protected serialNumberFormControl: FormControl = new FormControl();
@@ -70,12 +71,14 @@ export class FormlyFieldCheckboxWithImageComponent extends FieldWrapper implemen
 
     public ngOnInit() {
         this.value = this.formControl.value ?? this.field.defaultValue;
+        this.updateShowContent();
 
         // Listen to form control status changes (e.g., from parent form)
         this.formControl.statusChanges.pipe(takeUntil(this.destroy)).subscribe(status => {
             if (status === "DISABLED" && this.value !== false) {
                 this.value = false;
                 this.formControl.setValue(this.value);
+                this.updateShowContent();
             }
         });
 
@@ -96,15 +99,15 @@ export class FormlyFieldCheckboxWithImageComponent extends FieldWrapper implemen
     protected updateFormControl(event: CustomEvent) {
         this.value = event.detail.checked;
         this.formControl.setValue(this.value);
+        this.updateShowContent();
     }
 
     /**
-     * Returns the show/hide value based on the properties.
-     *
-     * @returns boolean value representing "show" or "hide".
+     * Updates the shouldShowContent property based on current state.
+     * Cached to avoid recalculation on every change detection cycle.
      */
-    protected showContent() {
-        return (!this.field.props?.disabled && !this.value) && this.field.props?.url !== undefined;
+    private updateShowContent(): void {
+        this.shouldShowContent = (!this.field.props?.disabled && !this.value) && this.field.props?.url !== undefined;
     }
 
     private initializeSerialNumberField(): void {
