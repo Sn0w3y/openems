@@ -87,7 +87,7 @@ export class ProductionSectionComponent extends AbstractSection implements OnIni
         }
         super.updateSectionData(
             sum.production.activePower,
-            sum.production.powerRatio,
+            sum.production.distributionRatio,
             arrowIndicate);
     }
 

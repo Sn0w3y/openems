@@ -87,7 +87,7 @@ export class ConsumptionSectionComponent extends AbstractSection implements OnIn
         }
         super.updateSectionData(
             sum.consumption.activePower,
-            sum.consumption.powerRatio,
+            sum.consumption.distributionRatio,
             arrowIndicate);
     }
 

@@ -135,7 +135,7 @@ export class GridSectionComponent extends AbstractSection implements OnInit, OnD
             this.name = this.translate.instant("GENERAL.GRID_BUY");
             super.updateSectionData(
                 sum.grid.buyActivePower,
-                sum.grid.powerRatio,
+                sum.grid.distributionRatio,
                 arrowIndicate);
             // only reacts to kW values (50 W => 0.1 kW rounded)
         } else if (sum.grid.sellActivePower && sum.grid.sellActivePower > 49) {
@@ -151,7 +151,7 @@ export class GridSectionComponent extends AbstractSection implements OnInit, OnD
             this.name = this.translate.instant("GENERAL.GRID_SELL");
             super.updateSectionData(
                 sum.grid.sellActivePower,
-                sum.grid.powerRatio,
+                sum.grid.distributionRatio,
                 arrowIndicate);
         } else {
             this.name = this.translate.instant("GENERAL.GRID");

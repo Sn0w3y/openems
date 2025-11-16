@@ -20,6 +20,7 @@
             "ENERGYMONITOR": {
                 "ACTIVE_POWER": "Active power",
                 "CONSUMPTION_WARNING": "Consumption & unknown producers",
+                "GAUGE_TOOLTIP": "Gauge shows real-time power distribution relative to total system power",
                 "GRID_METER": "Grid meter",
                 "PRODUCTION_METER": "Production meter",
                 "REACTIVE_POWER": "Reactive power",

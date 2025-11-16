@@ -1,7 +1,8 @@
 <svg:path [attr.d]="outlinePath" fill="var(--ion-color-light)" stroke="var(--ion-color-medium-soft)"></svg:path>
   @if (isEnabled) {
     <svg:path [attr.d]="valuePath" fill="var(--ion-color-warning)" stroke="var(--ion-color-warning)">
-      </svg:path>
+      <svg:title>{{ 'EDGE.INDEX.ENERGYMONITOR.GAUGE_TOOLTIP' | translate }}</svg:title>
+    </svg:path>
     }
     @if (isEnabled && energyFlow) {
       <svg:g>

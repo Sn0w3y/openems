@@ -273,6 +273,59 @@ export class CurrentData {
             // State
             result.system.state = c["_sum/State"];
         }
+
+        {
+            /*
+      * Distribution Ratios - Real-time power distribution for gauge visualization
+      */
+            // Production distribution ratio
+            result.production.distributionRatio = Utils.orElse(
+                Utils.divideSafely(result.production.activePower, result.system.totalPower),
+                0,
+            );
+
+            // Grid distribution ratio (negative for buy, positive for sell)
+            if (result.grid.buyActivePower && result.grid.buyActivePower > 0) {
+                result.grid.distributionRatio = Utils.orElse(
+                    Utils.multiplySafely(
+                        Utils.divideSafely(result.grid.buyActivePower, result.system.totalPower),
+                        -1,
+                    ),
+                    0,
+                );
+            } else if (result.grid.sellActivePower && result.grid.sellActivePower > 0) {
+                result.grid.distributionRatio = Utils.orElse(
+                    Utils.divideSafely(result.grid.sellActivePower, result.system.totalPower),
+                    0,
+                );
+            } else {
+                result.grid.distributionRatio = 0;
+            }
+
+            // Consumption distribution ratio
+            result.consumption.distributionRatio = Utils.orElse(
+                Utils.divideSafely(result.consumption.activePower, result.system.totalPower),
+                0,
+            );
+
+            // Storage distribution ratio (negative for discharge, positive for charge)
+            if (result.storage.effectiveChargePower && result.storage.effectiveChargePower > 0) {
+                result.storage.distributionRatio = Utils.orElse(
+                    Utils.divideSafely(result.storage.effectiveChargePower, result.system.totalPower),
+                    0,
+                );
+            } else if (result.storage.effectiveDischargePower && result.storage.effectiveDischargePower > 0) {
+                result.storage.distributionRatio = Utils.orElse(
+                    Utils.multiplySafely(
+                        Utils.divideSafely(result.storage.effectiveDischargePower, result.system.totalPower),
+                        -1,
+                    ),
+                    0,
+                );
+            } else {
+                result.storage.distributionRatio = 0;
+            }
+        }
         return result;
     }
 

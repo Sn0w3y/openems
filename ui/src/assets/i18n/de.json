@@ -20,6 +20,7 @@
       "ENERGYMONITOR": {
         "ACTIVE_POWER": "Ausgabeleistung",
         "CONSUMPTION_WARNING": "Verbrauch & unbekannte Erzeuger",
+        "GAUGE_TOOLTIP": "Anzeige zeigt Echtzeit-Leistungsverteilung relativ zur Gesamtsystemleistung",
         "GRID_METER": "Netzzähler",
         "PRODUCTION_METER": "Erzeugungszähler",
         "REACTIVE_POWER": "Blindleistung",

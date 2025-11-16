@@ -48,13 +48,15 @@ export namespace DefaultTypes {
             dischargeActivePowerAc: number,
             dischargeActivePowerDc: number,
             maxDischargeActivePower?: number,
-            powerRatio: number,
+            powerRatio: number, // Historical max-based ratio [-1,1]
+            distributionRatio: number, // Real-time power distribution ratio [-1,1]
             maxApparentPower: number,
             effectivePower: number,
             effectiveChargePower: number,
             effectiveDischargePower: number,
         }, production: {
-            powerRatio: number,
+            powerRatio: number, // Historical max-based ratio [-1,1]
+            distributionRatio: number, // Real-time power distribution ratio [0,1]
             hasDC: boolean,
             activePower: number, // sum of activePowerAC and activePowerDC
             activePowerAc: number,
@@ -64,7 +66,8 @@ export namespace DefaultTypes {
             activePowerDc: number,
             maxActivePower: number
         }, grid: {
-            powerRatio: number,
+            powerRatio: number, // Historical max-based ratio [-1,1]
+            distributionRatio: number, // Real-time power distribution ratio [-1,1]
             activePowerL1: number,
             activePowerL2: number,
             activePowerL3: number,
@@ -78,7 +81,8 @@ export namespace DefaultTypes {
             gridMode: number,
             restrictionMode: number
         }, consumption: {
-            powerRatio: number,
+            powerRatio: number, // Historical max-based ratio [-1,1]
+            distributionRatio: number, // Real-time power distribution ratio [0,1]
             activePower: number,
             activePowerL1: number,
             activePowerL2: number,

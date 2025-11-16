@@ -121,7 +121,7 @@ export class StorageSectionComponent extends AbstractSection implements OnInit, 
                         this.name = this.translate.instant("EDGE.INDEX.ENERGYMONITOR.STORAGE_CHARGE");
                         super.updateSectionData(
                             sum.storage.effectiveChargePower,
-                            sum.storage.powerRatio,
+                            sum.storage.distributionRatio,
                             arrowIndicate);
                     } else if (sum.storage.effectiveDischargePower != null) {
                         let arrowIndicate: number;
@@ -137,7 +137,7 @@ export class StorageSectionComponent extends AbstractSection implements OnInit, 
                         this.name = this.translate.instant("EDGE.INDEX.ENERGYMONITOR.STORAGE_DISCHARGE");
                         super.updateSectionData(
                             sum.storage.effectiveDischargePower,
-                            sum.storage.powerRatio,
+                            sum.storage.distributionRatio,
                             arrowIndicate);
                     } else {
                         this.name = this.translate.instant("EDGE.INDEX.ENERGYMONITOR.STORAGE");
