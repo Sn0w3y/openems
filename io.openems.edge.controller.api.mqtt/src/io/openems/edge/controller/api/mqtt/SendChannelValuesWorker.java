@@ -7,12 +7,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.eclipse.paho.mqttv5.common.packet.MqttProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,6 +20,8 @@ import com.google.common.collect.ImmutableTable;
 import com.google.common.collect.Table;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.gson.JsonElement;
+import com.google.gson.JsonNull;
+import com.hivemq.client.mqtt.datatypes.MqttQos;
 
 import io.openems.common.channel.AccessMode;
 import io.openems.common.utils.StringUtils;
@@ -37,16 +39,9 @@ import io.openems.edge.common.component.OpenemsComponent;
  */
 public class SendChannelValuesWorker {
 
-	private static final int MQTT_QOS = 0; // loss is ok
+	private static final MqttQos MQTT_QOS = MqttQos.AT_MOST_ONCE; // loss is ok
 	private static final boolean MQTT_RETAIN = true; // send last value to subscriber
 	private static final int SEND_VALUES_OF_ALL_CHANNELS_AFTER_SECONDS = 300; /* 5 minutes */
-	private static final MqttProperties MQTT_PROPERTIES;
-
-	static {
-		MQTT_PROPERTIES = new MqttProperties();
-		// channel value is only valid for restricted time
-		MQTT_PROPERTIES.setMessageExpiryInterval(Long.valueOf(SEND_VALUES_OF_ALL_CHANNELS_AFTER_SECONDS * 2));
-	}
 
 	private final Logger log = LoggerFactory.getLogger(SendChannelValuesWorker.class);
 	private final ControllerApiMqttImpl parent;
@@ -122,18 +117,6 @@ public class SendChannelValuesWorker {
 									.isAtLeast(this.parent.config.persistencePriority()))
 					.collect(ImmutableTable.toImmutableTable(c -> c.address().getComponentId(),
 							c -> c.address().getChannelId(), c -> c.value().asJson()));
-			// TODO remove values for disappeared components
-//			final Set<String> enabledComponentIds = enabledComponents.stream() //
-//					.map(c -> c.id()) //
-//					.collect(Collectors.toSet());
-//			this.lastValues.rowMap().entrySet().stream() //
-//					.filter(row -> !enabledComponentIds.contains(row.getKey())) //
-//					.forEach(row -> {
-//						row.getValue().entrySet().parallelStream() //
-//								.forEach(column -> {
-//									this.publish(row.getKey() + "/" + column.getKey(), JsonNull.INSTANCE.toString());
-//								});
-//					});
 		} catch (Exception e) {
 			// ConcurrentModificationException can happen if Channels are dynamically added
 			// or removed
@@ -203,6 +186,19 @@ public class SendChannelValuesWorker {
 				}
 			}
 
+			// Remove values for disappeared components by publishing JsonNull
+			final Set<String> currentComponentIds = this.allValues.rowKeySet();
+			for (Entry<String, Map<String, JsonElement>> row : lastAllValues.rowMap().entrySet()) {
+				if (!currentComponentIds.contains(row.getKey())) {
+					// Component disappeared - publish JsonNull for all its channels
+					for (Entry<String, JsonElement> column : row.getValue().entrySet()) {
+						final var subtopic = //
+								ControllerApiMqtt.TOPIC_CHANNEL_PREFIX + "/" + row.getKey() + "/" + column.getKey();
+						this.publish(subtopic, JsonNull.INSTANCE.toString());
+					}
+				}
+			}
+
 			// Update lastUpdate timestamp
 			this.publish(ControllerApiMqtt.TOPIC_CHANNEL_LAST_UPDATE, String.valueOf(this.timestamp));
 
@@ -236,7 +232,7 @@ public class SendChannelValuesWorker {
 			return this.parent.parent.publish(//
 					/* topic */ subTopic, //
 					/* message */ value.toString(), //
-					MQTT_QOS, MQTT_RETAIN, MQTT_PROPERTIES //
+					MQTT_QOS, MQTT_RETAIN //
 			);
 		}
 

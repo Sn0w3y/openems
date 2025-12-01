@@ -186,6 +186,12 @@
 			<version>1.0.2</version>
 		</dependency>
 		<dependency>
+			<!-- RxJava 2 - required by HiveMQ MQTT Client -->
+			<groupId>io.reactivex.rxjava2</groupId>
+			<artifactId>rxjava</artifactId>
+			<version>2.2.21</version>
+		</dependency>
+		<dependency>
 			<groupId>io.reactivex.rxjava3</groupId>
 			<artifactId>rxjava</artifactId>
 			<version>3.1.12</version>
@@ -292,20 +298,6 @@
 			<version>4.13.2_1</version>
 		</dependency>
 		<dependency>
-			<!-- Bouncycastle for Eclipse Paho MQTTv5 Client -->
-			<!-- https://mvnrepository.com/artifact/org.bouncycastle/bcpkix-jdk18on -->
-			<groupId>org.bouncycastle</groupId>
-			<artifactId>bcpkix-jdk18on</artifactId>
-			<version>1.82</version>
-		</dependency>
-		<dependency>
-			<!-- Bouncycastle for Eclipse Paho MQTTv5 Client -->
-			<!-- https://mvnrepository.com/artifact/org.bouncycastle/bcprov-jdk18on -->
-			<groupId>org.bouncycastle</groupId>
-			<artifactId>bcprov-jdk18on</artifactId>
-			<version>1.82</version>
-		</dependency>
-		<dependency>
 			<groupId>org.dhatim</groupId>
 			<artifactId>fastexcel</artifactId>
 			<version>0.19.0</version>
@@ -314,12 +306,6 @@
 			<groupId>org.dhatim</groupId>
 			<artifactId>fastexcel-reader</artifactId>
 			<version>0.19.0</version>
-		</dependency>
-		<dependency>
-			<!-- Eclipse Paho MQTTv5 Client -->
-			<groupId>org.eclipse.paho</groupId>
-			<artifactId>org.eclipse.paho.mqttv5.client</artifactId>
-			<version>1.2.5</version>
 		</dependency>
 		<dependency>
 			<!-- Java mDNS Library -->

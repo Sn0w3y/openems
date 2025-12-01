@@ -11,10 +11,6 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.eclipse.paho.mqttv5.client.IMqttClient;
-import org.eclipse.paho.mqttv5.common.MqttException;
-import org.eclipse.paho.mqttv5.common.MqttMessage;
-import org.eclipse.paho.mqttv5.common.packet.MqttProperties;
 import org.osgi.service.component.ComponentContext;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
@@ -30,6 +26,9 @@ import org.osgi.service.event.propertytypes.EventTopics;
 import org.osgi.service.metatype.annotations.Designate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.hivemq.client.mqtt.datatypes.MqttQos;
+import com.hivemq.client.mqtt.mqtt5.Mqtt5AsyncClient;
 
 import io.openems.common.exceptions.OpenemsError.OpenemsNamedException;
 import io.openems.common.exceptions.OpenemsException;
@@ -70,7 +69,7 @@ public class ControllerApiMqttImpl extends AbstractOpenemsComponent
 
 	private volatile ScheduledFuture<?> reconnectFuture = null;
 	private String topicPrefix;
-	private IMqttClient mqttClient = null;
+	private Mqtt5AsyncClient mqttClient = null;
 	private List<MqttTopicFilter> topicFilters;
 
 	@Reference(policy = ReferencePolicy.DYNAMIC, policyOption = ReferencePolicyOption.GREEDY, cardinality = ReferenceCardinality.OPTIONAL)
@@ -83,8 +82,9 @@ public class ControllerApiMqttImpl extends AbstractOpenemsComponent
 		// Expand the filterSpec to the filterList
 		if (config == null || config.topicFilters().length == 0) {
 			return List.of();
-		}	
-		if (config.topicFilters().length == 1 && (config.topicFilters()[0] == null || config.topicFilters()[0].isBlank())) {
+		}
+		if (config.topicFilters().length == 1
+				&& (config.topicFilters()[0] == null || config.topicFilters()[0].isBlank())) {
 			return List.of();
 		}
 
@@ -133,12 +133,12 @@ public class ControllerApiMqttImpl extends AbstractOpenemsComponent
 
 	/**
 	 * Creates the topic prefix in either format.
-	 * 
+	 *
 	 * <ul>
 	 * <li>topic_prefix/edge/edge_id/
 	 * <li>edge/edge_id/
 	 * </ul>
-	 * 
+	 *
 	 * @param config the {@link Config}
 	 * @return the prefix
 	 */
@@ -161,17 +161,8 @@ public class ControllerApiMqttImpl extends AbstractOpenemsComponent
 	protected void deactivate() {
 		super.deactivate();
 		shutdownAndAwaitTermination(this.scheduledExecutorService, 0);
-
-		if (this.mqttClient != null) {
-			try {
-				this.mqttClient.disconnect();
-				this.mqttClient.close();
-				this.mqttClient = null;
-			} catch (MqttException e) {
-				this.logWarn(this.log, "Unable to close connection to MQTT broker: " + e.getMessage());
-				this.log.warn(e.getMessage(), e);
-			}
-		}
+		this.mqttConnector.deactivate();
+		this.mqttClient = null;
 	}
 
 	@Override
@@ -203,7 +194,7 @@ public class ControllerApiMqttImpl extends AbstractOpenemsComponent
 			// Send new EdgeConfig
 			var config = (EdgeConfig) event.getProperty(EdgeEventConstants.TOPIC_CONFIG_UPDATE_KEY);
 			this.publish(ControllerApiMqtt.TOPIC_EDGE_CONFIG + "/", config.toJson().toString(), //
-					1 /* QOS */, true /* retain */, new MqttProperties() /* no specific properties */);
+					MqttQos.AT_LEAST_ONCE, true /* retain */);
 
 			// Trigger sending of all channel values, because a Component might have
 			// disappeared
@@ -218,11 +209,13 @@ public class ControllerApiMqttImpl extends AbstractOpenemsComponent
 	 * @param subTopic the MQTT topic. The global MQTT Topic prefix is added in
 	 *                 front of this string
 	 * @param message  the message
+	 * @param qos      the QoS level
+	 * @param retained whether to retain
 	 * @return MqttPublishStatus enum value: OK if the message was successfully
 	 *         published, ERROR if publishing failed, FILTERED if the topic was
 	 *         filtered.
 	 */
-	protected MqttPublishStatus publish(String subTopic, MqttMessage message) {
+	protected MqttPublishStatus publish(String subTopic, String message, MqttQos qos, boolean retained) {
 		if (!this.isEnabled()) {
 			return MqttPublishStatus.ERROR;
 		}
@@ -235,31 +228,17 @@ public class ControllerApiMqttImpl extends AbstractOpenemsComponent
 			if (!this.filterTopic(subTopic)) {
 				return MqttPublishStatus.FILTERED;
 			}
-			mqttClient.publish(this.topicPrefix + subTopic, message);
+			mqttClient.publishWith() //
+					.topic(this.topicPrefix + subTopic) //
+					.payload(message.getBytes(StandardCharsets.UTF_8)) //
+					.qos(qos) //
+					.retain(retained) //
+					.send();
 			return MqttPublishStatus.OK;
-		} catch (MqttException e) {
+		} catch (Exception e) {
 			this.logWarn(this.log, e.getMessage());
 			return MqttPublishStatus.ERROR;
 		}
-	}
-
-	/**
-	 * Publish a message to a topic.
-	 *
-	 * @param subTopic   the MQTT topic. The global MQTT Topic prefix is added in
-	 *                   front of this string
-	 * @param message    the message; internally translated to a UTF-8 byte array
-	 * @param qos        the MQTT QOS
-	 * @param retained   the MQTT retained parameter
-	 * @param properties the {@link MqttProperties}
-	 * @return MqttPublishStatus enum value: OK if the message was successfully
-	 *         published, ERROR if publishing failed, FILTERED if the topic was
-	 *         filtered.
-	 */
-	protected MqttPublishStatus publish(String subTopic, String message, int qos, boolean retained,
-			MqttProperties properties) {
-		var msg = new MqttMessage(message.getBytes(StandardCharsets.UTF_8), qos, retained, properties);
-		return this.publish(subTopic, msg);
 	}
 
 	protected boolean filterTopic(String topic) {
@@ -283,8 +262,8 @@ public class ControllerApiMqttImpl extends AbstractOpenemsComponent
 	}
 
 	private void attemptConnect() {
-		if (this.mqttClient != null && this.mqttClient.isConnected()) {
-			return; // Already connected
+		if (this.mqttClient != null) {
+			return; // Already have a client
 		}
 		try {
 			this.mqttConnector
