@@ -1,0 +1,14 @@
+{
+  "name": "openems-matter-server",
+  "version": "1.0.0",
+  "description": "OpenEMS Matter.js bridge server",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@matter/main": "^0.16.0",
+    "ws": "^8.16.0"
+  }
+}
