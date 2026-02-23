@@ -9,7 +9,6 @@ import org.slf4j.LoggerFactory;
 import io.openems.edge.bridge.matter.api.BridgeMatter;
 import io.openems.edge.bridge.matter.api.MatterAttributeUpdate;
 import io.openems.edge.bridge.matter.api.MatterComponent;
-import io.openems.edge.common.channel.ChannelId;
 import io.openems.edge.common.component.AbstractOpenemsComponent;
 import io.openems.edge.common.component.OpenemsComponent;
 
@@ -26,8 +25,9 @@ public abstract class AbstractMatterComponent extends AbstractOpenemsComponent i
 
 	private boolean subscribed = false;
 
-	protected AbstractMatterComponent(ChannelId[]... channelIds) {
-		super(channelIds);
+	protected AbstractMatterComponent(io.openems.edge.common.channel.ChannelId[] firstInitialChannelIds,
+			io.openems.edge.common.channel.ChannelId[]... furtherInitialChannelIds) {
+		super(firstInitialChannelIds, furtherInitialChannelIds);
 	}
 
 	/**
