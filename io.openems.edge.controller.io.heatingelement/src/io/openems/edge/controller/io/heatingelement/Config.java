@@ -50,6 +50,27 @@ import io.openems.edge.controller.io.heatingelement.enums.WorkMode;
 	@AttributeDefinition(name = "Minimum switching time between two states", description = "Minimum time (Seconds) is applied to avoid continuous switching on threshold")
 	int minimumSwitchingTime() default 60;
 
+	@AttributeDefinition(name = "Zero Feed-In Mode", description = "Enables SOC-based staged probing so a curtailed PV inverter can release additional power for the heating element even when grid export is held at 0 W")
+	boolean zeroFeedInMode() default false;
+
+	@AttributeDefinition(name = "Zero Feed-In SOC Bootstrap Level 1 [%]", description = "Minimum ESS SOC that allows probing heating level 1")
+	int zeroFeedInSocLevel1() default 92;
+
+	@AttributeDefinition(name = "Zero Feed-In SOC Bootstrap Level 2 [%]", description = "Minimum ESS SOC that allows probing heating level 2")
+	int zeroFeedInSocLevel2() default 94;
+
+	@AttributeDefinition(name = "Zero Feed-In SOC Bootstrap Level 3 [%]", description = "Minimum ESS SOC that allows probing heating level 3")
+	int zeroFeedInSocLevel3() default 96;
+
+	@AttributeDefinition(name = "Zero Feed-In Probe Duration [s]", description = "Time to wait after enabling the next heating level before validating that PV regulation has taken over the added load")
+	int zeroFeedInProbeDuration() default 10;
+
+	@AttributeDefinition(name = "Zero Feed-In Maximum Battery Discharge [W]", description = "Maximum allowed ESS battery discharge while validating a zero-feed-in probe")
+	int zeroFeedInMaxBatteryDischarge() default 300;
+
+	@AttributeDefinition(name = "Zero Feed-In Maximum Grid Import [W]", description = "Maximum allowed grid import while validating a zero-feed-in probe")
+	int zeroFeedInMaxGridImport() default 300;
+
 	@AttributeDefinition(name = "Minimum energylimit", description = "The minimum Energylimit in [Wh]")
 	int minEnergylimit() default 10000;
 
