@@ -146,6 +146,16 @@ public class ControllerIoHeatingElementImpl extends AbstractOpenemsComponent
 	private Level currentLevel = Level.LEVEL_0;
 	/** Last Level change time, used for the hysteresis. */
 	private LocalDateTime lastLevelChange = LocalDateTime.MIN;
+
+	/** Start timestamp of the currently active zero-feed-in probe. */
+	private LocalDateTime zeroFeedInProbeStart = null;
+	/** Heating level currently being validated by the zero-feed-in probe. */
+	private Level zeroFeedInProbeLevel = null;
+	/** Earliest timestamp at which another zero-feed-in probe may be started. */
+	private LocalDateTime zeroFeedInRetryAfter = LocalDateTime.MIN;
+	/** Bypasses normal switching hysteresis for an unsafe failed probe rollback. */
+	private boolean zeroFeedInImmediateLevelChange = false;
+
 	/** Last active task. */
 	private OneTask<Payload> lastTask = null;
 
@@ -291,6 +301,11 @@ public class ControllerIoHeatingElementImpl extends AbstractOpenemsComponent
 
 		long excessPower = this.calculateExcessPower(gridActivePower, essDischargePower);
 		Level targetLevel = this.getRequiredLevel(excessPower);
+		if (this.config.zeroFeedInMode()) {
+			targetLevel = this.applyZeroFeedInMode(targetLevel, gridActivePower, essDischargePower);
+		} else {
+			this.resetZeroFeedInState();
+		}
 		this.runState = this.getStateFromLevel(targetLevel);
 
 		// Example with schedule
@@ -304,8 +319,14 @@ public class ControllerIoHeatingElementImpl extends AbstractOpenemsComponent
 			};
 		}
 
-		targetLevel = this.runState == Status.ACTIVE_FORCED_LIMIT || this.runState == Status.ACTIVE_FORCED ? targetLevel
-				: this.applyHysteresis(targetLevel);
+		if (this.runState != Status.ACTIVE_FORCED_LIMIT && this.runState != Status.ACTIVE_FORCED) {
+			if (this.zeroFeedInImmediateLevelChange) {
+				setValue(this, ControllerIoHeatingElement.ChannelId.AWAITING_HYSTERESIS, false);
+				this.zeroFeedInImmediateLevelChange = false;
+			} else {
+				targetLevel = this.applyHysteresis(targetLevel);
+			}
+		}
 
 		this.applyLevel(targetLevel);
 		this.lastRunState = this.runState;
@@ -528,6 +549,145 @@ public class ControllerIoHeatingElementImpl extends AbstractOpenemsComponent
 	}
 
 	/**
+	 * Handles the dead-lock that occurs when an external inverter keeps the grid
+	 * connection at zero feed-in. With the heating element switched off, the usual
+	 * excess-power calculation cannot see curtailed PV headroom. ESS SOC is only
+	 * used as permission to probe the next heating level. Each level is validated
+	 * after a configurable grace period.
+	 *
+	 * <p>
+	 * Levels are probed sequentially (0 -> 1 -> 2 -> 3). A probe is accepted only
+	 * if PV production is present and the added load is supplied without relevant
+	 * grid import or battery discharge. On failure the controller immediately
+	 * rolls back one level and starts a retry cooldown.
+	 *
+	 * @param normalTargetLevel target level derived from normal excess-power logic
+	 * @param gridActivePower   grid power; positive values are import
+	 * @param essDischargePower actual battery discharge power; positive is discharge
+	 * @return target level including zero-feed-in bootstrap logic
+	 */
+	private Level applyZeroFeedInMode(Level normalTargetLevel, int gridActivePower, int essDischargePower) {
+		this.zeroFeedInImmediateLevelChange = false;
+
+		final var now = LocalDateTime.now(this.componentManager.getClock());
+		final var soc = this.sum.getEssSocChannel().value().orElse(-1);
+		final var productionActivePower = this.sum.getProductionActivePowerChannel().value().orElse(0);
+
+		if (this.zeroFeedInProbeLevel != null && this.zeroFeedInProbeStart != null) {
+			final var validationAt = this.zeroFeedInProbeStart
+					.plusSeconds(Math.max(0, this.config.zeroFeedInProbeDuration()));
+
+			// Give the inverter time to lift its curtailment. Temporary import or battery
+			// discharge during this grace period is expected and is validated afterwards.
+			if (now.isBefore(validationAt)) {
+				return this.zeroFeedInProbeLevel;
+			}
+
+			final var completedProbeLevel = this.zeroFeedInProbeLevel;
+			final var probeSuccessful = productionActivePower > 0 //
+					&& gridActivePower <= this.config.zeroFeedInMaxGridImport() //
+					&& essDischargePower <= this.config.zeroFeedInMaxBatteryDischarge();
+
+			this.zeroFeedInProbeLevel = null;
+			this.zeroFeedInProbeStart = null;
+
+			if (!probeSuccessful) {
+				final var rollbackLevel = previousLevel(completedProbeLevel);
+				final var retryDelaySeconds = Math.max(this.config.minimumSwitchingTime(),
+						this.config.zeroFeedInProbeDuration());
+				this.zeroFeedInRetryAfter = now.plusSeconds(Math.max(0, retryDelaySeconds));
+				this.lastLevelChange = now;
+				this.zeroFeedInImmediateLevelChange = true;
+				return rollbackLevel;
+			}
+
+			// Keep a successfully validated level for this cycle. If SOC permits another
+			// stage, that next stage is probed in the following cycle.
+			return higherLevel(normalTargetLevel, completedProbeLevel);
+		}
+
+		// No valid SOC or no PV production: never bootstrap. The original excess-power
+		// algorithm remains authoritative.
+		if (soc < 0 || productionActivePower <= 0) {
+			return normalTargetLevel;
+		}
+
+		// Never use the bootstrap to fight a reduction requested by normal control.
+		if (normalTargetLevel.getValue() < this.currentLevel.getValue()) {
+			return normalTargetLevel;
+		}
+
+		// If normal control already wants to increase the level, visible export exists
+		// and no zero-feed-in bootstrap is necessary.
+		if (normalTargetLevel.getValue() != this.currentLevel.getValue()) {
+			return normalTargetLevel;
+		}
+
+		if (now.isBefore(this.zeroFeedInRetryAfter)) {
+			return normalTargetLevel;
+		}
+
+		if (gridActivePower > this.config.zeroFeedInMaxGridImport()
+				|| essDischargePower > this.config.zeroFeedInMaxBatteryDischarge()) {
+			return normalTargetLevel;
+		}
+
+		final var socMaximumLevel = this.getZeroFeedInMaximumLevelForSoc(soc);
+		if (socMaximumLevel.getValue() <= this.currentLevel.getValue()) {
+			return normalTargetLevel;
+		}
+
+		final var nextLevel = nextLevel(this.currentLevel);
+		if (nextLevel.getValue() > socMaximumLevel.getValue()) {
+			return normalTargetLevel;
+		}
+
+		this.zeroFeedInProbeLevel = nextLevel;
+		this.zeroFeedInProbeStart = now;
+		return nextLevel;
+	}
+
+	private Level getZeroFeedInMaximumLevelForSoc(int soc) {
+		if (soc >= this.config.zeroFeedInSocLevel3()) {
+			return Level.LEVEL_3;
+		}
+		if (soc >= this.config.zeroFeedInSocLevel2()) {
+			return Level.LEVEL_2;
+		}
+		if (soc >= this.config.zeroFeedInSocLevel1()) {
+			return Level.LEVEL_1;
+		}
+		return Level.LEVEL_0;
+	}
+
+	private void resetZeroFeedInState() {
+		this.zeroFeedInProbeStart = null;
+		this.zeroFeedInProbeLevel = null;
+		this.zeroFeedInRetryAfter = LocalDateTime.MIN;
+		this.zeroFeedInImmediateLevelChange = false;
+	}
+
+	private static Level nextLevel(Level level) {
+		return switch (level) {
+		case LEVEL_0 -> Level.LEVEL_1;
+		case LEVEL_1 -> Level.LEVEL_2;
+		case LEVEL_2, LEVEL_3 -> Level.LEVEL_3;
+		};
+	}
+
+	private static Level previousLevel(Level level) {
+		return switch (level) {
+		case LEVEL_0, LEVEL_1 -> Level.LEVEL_0;
+		case LEVEL_2 -> Level.LEVEL_1;
+		case LEVEL_3 -> Level.LEVEL_2;
+		};
+	}
+
+	private static Level higherLevel(Level first, Level second) {
+		return first.getValue() >= second.getValue() ? first : second;
+	}
+
+	/**
 	 * Calculates the power that can be consumed by the heating element.
 	 *
 	 * @param gridActivePower   the current active power of the grid
@@ -588,6 +748,7 @@ public class ControllerIoHeatingElementImpl extends AbstractOpenemsComponent
 		this.isForceHeatingActive = false;
 		this.isForceHeatingInTheEndActive = false;
 		this.timeToForceHeat = null;
+		this.resetZeroFeedInState();
 	}
 
 	/**
