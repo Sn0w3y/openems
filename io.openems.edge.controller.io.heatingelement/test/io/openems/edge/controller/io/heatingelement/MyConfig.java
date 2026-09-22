@@ -23,6 +23,13 @@ public class MyConfig extends AbstractComponentConfig implements Config {
 		private String endTime;
 		private Level defaultLevel;
 		private int minimumSwitchingTime;
+		private boolean zeroFeedInMode = false;
+		private int zeroFeedInSocLevel1 = 92;
+		private int zeroFeedInSocLevel2 = 94;
+		private int zeroFeedInSocLevel3 = 96;
+		private int zeroFeedInProbeDuration = 10;
+		private int zeroFeedInMaxBatteryDischarge = 300;
+		private int zeroFeedInMaxGridImport = 300;
 		private String scheduler;
 
 		private Builder() {
@@ -96,6 +103,41 @@ public class MyConfig extends AbstractComponentConfig implements Config {
 
 		public Builder setMinimumSwitchingTime(int minimumSwitchingTime) {
 			this.minimumSwitchingTime = minimumSwitchingTime;
+			return this;
+		}
+
+		public Builder setZeroFeedInMode(boolean zeroFeedInMode) {
+			this.zeroFeedInMode = zeroFeedInMode;
+			return this;
+		}
+
+		public Builder setZeroFeedInSocLevel1(int zeroFeedInSocLevel1) {
+			this.zeroFeedInSocLevel1 = zeroFeedInSocLevel1;
+			return this;
+		}
+
+		public Builder setZeroFeedInSocLevel2(int zeroFeedInSocLevel2) {
+			this.zeroFeedInSocLevel2 = zeroFeedInSocLevel2;
+			return this;
+		}
+
+		public Builder setZeroFeedInSocLevel3(int zeroFeedInSocLevel3) {
+			this.zeroFeedInSocLevel3 = zeroFeedInSocLevel3;
+			return this;
+		}
+
+		public Builder setZeroFeedInProbeDuration(int zeroFeedInProbeDuration) {
+			this.zeroFeedInProbeDuration = zeroFeedInProbeDuration;
+			return this;
+		}
+
+		public Builder setZeroFeedInMaxBatteryDischarge(int zeroFeedInMaxBatteryDischarge) {
+			this.zeroFeedInMaxBatteryDischarge = zeroFeedInMaxBatteryDischarge;
+			return this;
+		}
+
+		public Builder setZeroFeedInMaxGridImport(int zeroFeedInMaxGridImport) {
+			this.zeroFeedInMaxGridImport = zeroFeedInMaxGridImport;
 			return this;
 		}
 
@@ -183,6 +225,41 @@ public class MyConfig extends AbstractComponentConfig implements Config {
 	@Override
 	public int minimumSwitchingTime() {
 		return this.builder.minimumSwitchingTime;
+	}
+
+	@Override
+	public boolean zeroFeedInMode() {
+		return this.builder.zeroFeedInMode;
+	}
+
+	@Override
+	public int zeroFeedInSocLevel1() {
+		return this.builder.zeroFeedInSocLevel1;
+	}
+
+	@Override
+	public int zeroFeedInSocLevel2() {
+		return this.builder.zeroFeedInSocLevel2;
+	}
+
+	@Override
+	public int zeroFeedInSocLevel3() {
+		return this.builder.zeroFeedInSocLevel3;
+	}
+
+	@Override
+	public int zeroFeedInProbeDuration() {
+		return this.builder.zeroFeedInProbeDuration;
+	}
+
+	@Override
+	public int zeroFeedInMaxBatteryDischarge() {
+		return this.builder.zeroFeedInMaxBatteryDischarge;
+	}
+
+	@Override
+	public int zeroFeedInMaxGridImport() {
+		return this.builder.zeroFeedInMaxGridImport;
 	}
 
 	@Override
